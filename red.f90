@@ -1,8 +1,9 @@
 integer*4, parameter :: n=90
 real*8 v(4),vec(4,n),dum,xg,xd,pasx,ys,ispline,sol,bbin
-integer*4 io
+integer*4 io,io2
 real*8, dimension (n) :: b(n), c(n), d(n)
 integer*4 :: rate,begino,endo
+character(len=24) dir(225),fil(225),path
 !write(*,*)"Holiiiii"
 
 print *, "So it begins..."
@@ -10,8 +11,29 @@ print *, ""
 print *, ""
 call system_clock(begino,rate)
 
-open(unit=50,file="./FULL_THRESHOLD_SCAN/ThresholdScan_151119_1420.dat",status="old")
-open(unit=51,file="./outputtest.dat",status="replace")
+!open(unit=50,file="./FULL_THRESHOLD_SCAN/ThresholdScan_151119_1420.dat",status="old")
+
+open(unit=40,file="./Total/test.dat",status="old")
+
+do l=1,225
+
+read(40,*,IOSTAT=io2)dir(l),fil(l)
+!write(*,*)".\"//TRIM(dir)//"ScanConfig_"//TRIM(fil)//".cfg"
+if(io2.ne.0)then
+write(*,*)"io:",io2,"Breaaak"
+exit
+endif
+enddo
+
+
+
+do jj=1,225
+
+
+open(unit=50,file=".\Total\"//TRIM(dir(jj))//"ThresholdScanByRandom_PixelsPerReg_500_"//TRIM(fil(jj))//".dat",status="old")
+open(unit=51,file=".\Total\"//TRIM(dir(jj))//"ThreshOut_"//TRIM(fil(jj))//".dat",status="replace")
+
+
 
 !open(unit=50,file="./test.dat",status="old")
 dum=1
@@ -93,14 +115,19 @@ enddo
 ! !write(*,*) vec(:,i),io
 
 ! enddo
+close(50)
+close(51)
+
+enddo
+
+
 call system_clock(endo)
 print *, ""
 print *, ""
 print *, "The deed is done."
 print *, "time:",real(endo-begino)/real(rate)
 
-close(50)
-close(51)
+close(40)
 
 
 
