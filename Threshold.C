@@ -99,11 +99,11 @@ bool GetThreshold(double *AThreshold, double *ANoise, double *AChisq, bool *Ascu
    *AChisq     = fitfcn->GetChisquare()/fitfcn->GetNDF();
    g->Delete();
    fitfcn->Delete();
-   if (*AThreshold>(ELECTRONS_PER_DAC*chargeMax) || *AThreshold<0){*Ascurve = true;cout<<"holi"<<endl;}
+   if (*AThreshold>(ELECTRONS_PER_DAC*chargeMax) || *AThreshold<0){*Ascurve = true;}
    return true;
 }
 
-Int_t ProcessPixel (int col, int addr, const char *fName) {
+Int_t ProcessPixel (int col, int addr, const char *fName, FILE * fpoutResults) {
   double Threshold = 0;
   double Noise = 0;
   double Chisq = 0;
@@ -113,8 +113,8 @@ Int_t ProcessPixel (int col, int addr, const char *fName) {
   {
           cout<<"Couldn't get Threshold of Pixel: "<<col<<" "<<addr<<endl;
   }
-  cout<<col<<" "<<addr<<" "<<Threshold<<" "<<Noise<<" "<<Chisq<<endl;
-  if (scurve) //Se ha mandado a dibujar el scurve de este pixel.
+  fprintf(fpoutResults, "%d %d %.2f %.2f %.2f\n", col,addr,Threshold,Noise,Chisq);
+  if (false) //Se ha mandado a dibujar el scurve de este pixel.
   {
 	     cout<<"Drawing S-Curve: "<<col<<"-"<< addr<<" with Threshold: "<<Threshold<<endl;
 	     TString colName;
@@ -159,6 +159,44 @@ Int_t ProcessPixel (int col, int addr, const char *fName) {
 }
 
 Int_t Threshold(TString fName) {
+
+  int initial = fName.Length()-16;
+  TString base (fName(initial, 12));
+
+  int dirLen = fName.Length()-55;
+  TString directory (fName(0,dirLen+1));
+  TString fNameCFG = directory+"ScanConfig"+base+".cfg";
+
+//Reading .cfg file
+
+  int ITHR,VCASN;
+  int VBIAS =0;
+  char readtitle[15];
+  int readvalue;
+
+ FILE *fpCFG = fopen (fNameCFG, "r");
+  if (!fpCFG) {
+    std::cout << "Unable to open cfg file " << fNameCFG <<std::endl;
+    return -1;
+  }
+
+  char line[1000];
+  for (int i = 0;i<13;i++){
+ 	 fgets(line, 1000, fpCFG);
+  }
+while ((fscanf (fpCFG, "%s %d", readtitle, &readvalue) == 2)) 
+  {
+    if(strcmp(readtitle, "VCASN")==0){VCASN=readvalue;}
+    if(strcmp(readtitle, "ITHR")==0){ITHR=readvalue;}
+  }
+
+  fclose(fpCFG);
+cout<<"Reading file: "<<endl;
+cout<<"VCASN "<<VCASN<<endl;
+cout<<"ITHR "<<ITHR<<endl;
+
+
+
   //Abriendo el archivo.
   FILE *fp = fopen (fName, "r");
   if (!fp) {
@@ -166,17 +204,24 @@ Int_t Threshold(TString fName) {
     return -1;
   }
 
+
+
   Int_t col, address, ampl, hits;
   Int_t lastcol = -1, lastaddress = -1;
   NPoints  = 0;
   NNostart = 0;
   NChisq   = 0;
 
+  TString fNameOut = directory+"ThresholdSummary"+base+".dat";
+
+  FILE *fpoutResults = fopen(fNameOut, "a");
+  fprintf(fpoutResults, "VCASN: %d ITHR: %d\n", VCASN,ITHR);
+
   //Leyendo el archivo.
   while((fscanf(fp,"%d %d %d %d",&col,&address,&ampl,&hits)==4)){ 
 	    if (((lastcol!=col)||(address!=lastaddress))&&(NPoints!=0)) 
 	    {
-	      ProcessPixel(lastcol, lastaddress,fName);
+	      ProcessPixel(lastcol, lastaddress,fName,fpoutResults);
 	      NPixels ++;
 	      ResetData();   
           NPoints  = 0;
@@ -188,5 +233,6 @@ Int_t Threshold(TString fName) {
 	    NPoints ++;
   }
   fclose(fp);
+  fclose(fpoutResults);
   return 1;
 }
